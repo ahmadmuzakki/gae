@@ -10,7 +10,8 @@ import (
 )
 
 type DatastoreMock struct {
-	storage []*Mock
+	mocks []*Mock
+	keys  []*Key
 }
 
 type Mock struct {
@@ -31,17 +32,37 @@ func (k *MockKey) String() string {
 	return fmt.Sprintf("/%s,%s", k.kind, id)
 }
 
-func (dm *DatastoreMock) NewIncompleteKey(ctx context.Context, kind string, parent *Key) *Key {
-	return dm.NewKey(ctx, kind, "", 0, parent)
+func (dm *DatastoreMock) MockIncompleteKey(ctx context.Context, kind string, parent *Key) *Key {
+	return dm.MockKey(ctx, kind, "", 0, parent)
 }
 
-func (dm *DatastoreMock) NewKey(ctx context.Context, kind string, stringID string, intID int64, parent *Key) *Key {
+func (dm *DatastoreMock) MockKey(ctx context.Context, kind string, stringID string, intID int64, parent *Key) *Key {
 	k := &Key{
 		kind:      kind,
 		parent:    parent,
 		intID:     intID,
 		stringID:  stringID,
 		namespace: internal.GetNamespace(ctx),
+	}
+
+	if dm.keys == nil {
+		dm.keys = make([]*Key, 0)
+	}
+	dm.keys = append(dm.keys, k)
+
+	return k
+}
+
+func (dm *DatastoreMock) newKey(ctx context.Context, kind string, stringID string, intID int64, parent *Key) *Key {
+	if len(dm.keys) == 0 {
+		return nil
+	}
+
+	k := dm.keys[0]
+	if len(dm.keys) > 1 {
+		dm.keys = dm.keys[1:]
+	} else {
+		dm.keys = nil
 	}
 	return k
 }
@@ -57,11 +78,11 @@ const (
 )
 
 func (dm *DatastoreMock) put(ctx context.Context, key *Key, src interface{}) (*Key, error) {
-	if len(dm.storage) == 0 {
+	if len(dm.mocks) == 0 {
 		return nil, errors.New("No more expectation")
 	}
 
-	mock := dm.storage[0]
+	mock := dm.mocks[0]
 	if mock.action != PutAction {
 		return nil, fmt.Errorf("Action %s is not expected", mock.action)
 	}
@@ -74,10 +95,10 @@ func (dm *DatastoreMock) put(ctx context.Context, key *Key, src interface{}) (*K
 		return nil, fmt.Errorf("Expected to called with namespace %s but current namespace is %s", mock.namespace, ns)
 	}
 
-	if len(dm.storage) > 1 {
-		dm.storage = dm.storage[1:]
+	if len(dm.mocks) > 1 {
+		dm.mocks = dm.mocks[1:]
 	} else {
-		dm.storage = nil
+		dm.mocks = nil
 	}
 
 	return mock.key, nil
@@ -98,11 +119,11 @@ func (dm *DatastoreMock) MockPut(key *Key, src interface{}) *Mock {
 }
 
 func (dm *DatastoreMock) appendMock(m *Mock) {
-	if dm.storage == nil {
-		dm.storage = make([]*Mock, 0)
+	if dm.mocks == nil {
+		dm.mocks = make([]*Mock, 0)
 	}
 
-	dm.storage = append(dm.storage, m)
+	dm.mocks = append(dm.mocks, m)
 }
 
 func (m *Mock) WithNameSpace(ns string) *Mock {

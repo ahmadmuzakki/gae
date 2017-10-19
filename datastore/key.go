@@ -18,7 +18,7 @@ type Key struct {
 
 func NewKey(ctx context.Context, kind string, stringID string, intID int64, parent *Key) *Key {
 	if m, ok := isMock(ctx); ok {
-		return m.NewKey(ctx, kind, stringID, intID, parent)
+		return m.newKey(ctx, kind, stringID, intID, parent)
 	}
 
 	k := &Key{
