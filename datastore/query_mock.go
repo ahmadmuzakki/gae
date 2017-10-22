@@ -9,7 +9,8 @@ import (
 )
 
 type MockQuery struct {
-	mocks []MockQueryAction
+	mocks   []*MockQueryAction
+	cursors []Cursor
 }
 
 type storage struct {
@@ -18,12 +19,12 @@ type storage struct {
 
 type MockQueryAction struct {
 	query       *Query
-	expectation []queryExpectation
+	expectation []QueryExpectation
 }
 
-type queryExpectation struct {
-	key   *Key
-	value interface{}
+type QueryExpectation struct {
+	Key   *Key
+	Value interface{}
 }
 
 func NewMockQuery(ctx context.Context) (context.Context, *MockQuery) {
@@ -33,15 +34,17 @@ func NewMockQuery(ctx context.Context) (context.Context, *MockQuery) {
 }
 
 func (mq *MockQuery) ExpectQuery(kind string) *MockQueryAction {
-	return &MockQueryAction{
+	mock := &MockQueryAction{
 		query: &Query{
 			kind:  kind,
 			limit: -1,
 		},
 	}
+	mq.mocks = append(mq.mocks, mock)
+	return mock
 }
 
-func (a *MockQueryAction) ExpectResult(results ...queryExpectation) {
+func (a *MockQueryAction) ExpectResult(results ...QueryExpectation) {
 	a.expectation = results
 }
 
@@ -142,7 +145,7 @@ func (mq *MockQuery) run(ctx context.Context, q *Query) *Iterator {
 
 	var err error
 	if !reflect.DeepEqual(mock.query, q) {
-		err = fmt.Errorf("Query %+v did not match with expected %+v", q, mq)
+		err = fmt.Errorf("Query %+v did not match with expected %+v", q, mock.query)
 	}
 
 	ctx = mq.setValue(ctx, mock.expectation)
@@ -152,12 +155,12 @@ func (mq *MockQuery) run(ctx context.Context, q *Query) *Iterator {
 	}
 }
 
-func (mq *MockQuery) setValue(ctx context.Context, value interface{}) context.Context {
+func (mq *MockQuery) setValue(ctx context.Context, value []QueryExpectation) context.Context {
 	return context.WithValue(ctx, "expected_value", value)
 }
 
-func (mq *MockQuery) getValue(ctx context.Context) []queryExpectation {
-	return ctx.Value("expected_value").([]queryExpectation)
+func (mq *MockQuery) getValue(ctx context.Context) []QueryExpectation {
+	return ctx.Value("expected_value").([]QueryExpectation)
 }
 
 func isMockQuery(ctx context.Context) (*MockQuery, bool) {
@@ -176,7 +179,29 @@ func (mq *MockQuery) next(i *Iterator, dst interface{}) (*Key, error) {
 
 	dir := reflect.Indirect(reflect.ValueOf(dst))
 	expect := values[i.index]
-	dir.Set(reflect.ValueOf(expect.value))
+	value := reflect.ValueOf(expect.Value)
+	directValue := reflect.Indirect(value)
+	dir.Set(directValue)
 	i.index += 1
-	return expect.key, nil
+	return expect.Key, nil
 }
+
+func (mq *MockQuery) MockCursor(str string) {
+	c := Cursor{
+		cursorStr: str,
+	}
+	mq.cursors = append(mq.cursors, c)
+}
+
+func (mq *MockQuery) decodeCursor(ctx context.Context, str string) (Cursor, error) {
+
+	if len(mq.cursors) == 0 {
+		return Cursor{}, fmt.Errorf("Cursor with string %s is not expected", str)
+	}
+
+	c := mq.cursors[0]
+	mq.cursors = mq.cursors[1:]
+	return c, nil
+}
+
+var Done = datastore.Done

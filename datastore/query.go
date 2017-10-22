@@ -11,12 +11,15 @@ type filter struct {
 	Value interface{}
 }
 
-func NewQuery(kind string) *Query {
-	return &Query{
-		kind:    kind,
-		limit:   -1,
-		queryDs: datastore.NewQuery(kind),
+func NewQuery(ctx context.Context, kind string) *Query {
+	query := &Query{
+		kind:  kind,
+		limit: -1,
 	}
+	if _, ok := isMockQuery(ctx); !ok {
+		query.queryDs = datastore.NewQuery(kind)
+	}
+	return query
 }
 
 // Query represents a datastore query.
@@ -186,8 +189,8 @@ func (c *Cursor) String() string {
 }
 
 func DecodeCursor(ctx context.Context, s string) (Cursor, error) {
-	if _, ok := isMock(ctx); ok {
-		//do something with mocked cursor
+	if mock, ok := isMockQuery(ctx); ok {
+		return mock.decodeCursor(ctx, s)
 	}
 	cursor, err := datastore.DecodeCursor(s)
 	return Cursor{
@@ -216,7 +219,7 @@ func (i *Iterator) Next(dst interface{}) (*Key, error) {
 	}
 
 	if mock, ok := isMockQuery(i.c); ok {
-		mock.next(i, dst)
+		return mock.next(i, dst)
 	}
 
 	k, err := i.iter.Next(dst)
