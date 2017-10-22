@@ -55,6 +55,16 @@ func convertDsKeyToKey(ctx context.Context, key *datastore.Key) *Key {
 	return NewKey(ctx, key.Kind(), key.StringID(), key.IntID(), parent)
 }
 
+func convertDsKeysToKeys(ctx context.Context, dsKeys []*datastore.Key) []*Key {
+	newKeys := make([]*Key, 0, len(dsKeys))
+	for _, dsKey := range dsKeys {
+		key := convertDsKeyToKey(ctx, dsKey)
+		newKeys = append(newKeys, key)
+	}
+
+	return newKeys
+}
+
 func (k *Key) String() string {
 	if k.dsKey == nil {
 		mock := MockKey(*k)

@@ -86,25 +86,22 @@ const (
 )
 
 func (dm *DatastoreMock) put(ctx context.Context, key *Key, src interface{}) (*Key, error) {
-	if len(dm.mocks) == 0 {
-		return nil, errors.New("No more expectation")
+	if err := dm.checkExpectations(); err != nil {
+		return nil, err
 	}
 
 	mock := dm.mocks[0]
-	if mock.action != ActionPut {
-		return nil, fmt.Errorf("Action %s is not expected. Expected action is %s", mock.action, ActionPut)
+
+	if err := mock.checkAction(ActionGet); err != nil {
+		return nil, err
 	}
 
-	if !reflect.DeepEqual(mock.key, key) {
-		return nil, errors.New("Key not equal")
+	if err := mock.checkKey(key); err != nil {
+		return nil, err
 	}
 
-	if ns := internal.GetNamespace(ctx); mock.namespace != ns {
-		return nil, fmt.Errorf("Expected to called with namespace %s but current namespace is %s", mock.namespace, ns)
-	}
-
-	if !reflect.DeepEqual(mock.param, src) {
-		return nil, fmt.Errorf("Source %+v doesn't match with %+v", src, mock.param)
+	if err := mock.checkNamespace(ctx); err != nil {
+		return nil, err
 	}
 
 	dm.trimMock()
@@ -135,7 +132,7 @@ func (dm *DatastoreMock) get(ctx context.Context, key *Key, dst interface{}) err
 	typeDest := reflect.TypeOf(dst)
 	typeParam := reflect.TypeOf(mock.param)
 	if !reflect.DeepEqual(typeDest, typeParam) {
-		return fmt.Errorf("Source %+v doesn't match with %+v", typeDest, typeParam)
+		return fmt.Errorf("Destination %+v doesn't match with %+v", typeDest, typeParam)
 	}
 
 	// assign value from *mock.param to *dst
