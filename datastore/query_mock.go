@@ -46,7 +46,8 @@ func (mq *MockQuery) run(ctx context.Context, q *Query) (it *Iterator) {
 	ctx = mq.setValue(ctx, mock.expectation)
 	it.c = ctx
 
-	mq.mocks = mq.mocks[1:]
+	mq.trimMock()
+
 	return
 }
 
@@ -82,7 +83,22 @@ func (mq *MockQuery) getAll(ctx context.Context, q *Query, dst interface{}) ([]*
 		sliceDest.Set(reflect.Append(sliceDest, newRow))
 	}
 
+	mq.trimMock()
+
 	return nil, nil
+}
+
+func (mq *MockQuery) count(ctx context.Context) (int, error) {
+	if len(mq.mocks) == 0 {
+		return 0, fmt.Errorf("No more expectations")
+	}
+	c := len(mq.mocks[0].expectation)
+	mq.trimMock()
+	return c, nil
+}
+
+func (mq *MockQuery) trimMock() {
+	mq.mocks = mq.mocks[1:]
 }
 
 func (mq *MockQuery) setValue(ctx context.Context, value []QueryExpectation) context.Context {
@@ -146,8 +162,8 @@ type QueryExpectation struct {
 	Value interface{}
 }
 
-func (a *MockQueryAction) ExpectResult(results ...QueryExpectation) {
-	a.expectation = results
+func (action *MockQueryAction) ExpectResult(results ...QueryExpectation) {
+	action.expectation = results
 }
 
 func (action *MockQueryAction) Ancestor(ancestor *Key) *MockQueryAction {
@@ -221,11 +237,4 @@ func (action *MockQueryAction) End(c Cursor) *MockQueryAction {
 
 	action.query = q
 	return action
-}
-
-func (action *MockQueryAction) Count(c context.Context) (int, error) {
-	/*// intercept for mock
-	action.query = q
-	return action.queryDs.Count(c)*/
-	return 0, nil
 }
