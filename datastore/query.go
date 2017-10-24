@@ -155,10 +155,15 @@ func (q *Query) Count(c context.Context) (int, error) {
 	return q.queryDs.Count(c)
 }
 
-func (q *Query) GetAll(c context.Context, dst interface{}) ([]*Key, error) {
-	q.preRun(c)
-	dskeys, err := q.queryDs.GetAll(c, dst)
-	keys := convertDsKeysToKeys(c, dskeys)
+func (q *Query) GetAll(ctx context.Context, dst interface{}) ([]*Key, error) {
+	q.preRun(ctx)
+
+	if mock, ok := isMockQuery(ctx); ok {
+		return mock.getAll(ctx, q, dst)
+	}
+
+	dskeys, err := q.queryDs.GetAll(ctx, dst)
+	keys := convertDsKeysToKeys(ctx, dskeys)
 	return keys, err
 }
 
