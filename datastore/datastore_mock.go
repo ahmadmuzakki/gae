@@ -91,8 +91,9 @@ func (dm *DatastoreMock) put(ctx context.Context, key *Key, src interface{}) (*K
 	}
 
 	mock := dm.mocks[0]
+	defer dm.trimMock()
 
-	if err := mock.checkAction(ActionGet); err != nil {
+	if err := mock.checkAction(ActionPut); err != nil {
 		return nil, err
 	}
 
@@ -108,9 +109,11 @@ func (dm *DatastoreMock) put(ctx context.Context, key *Key, src interface{}) (*K
 		return nil, err
 	}
 
-	dm.trimMock()
+	if err := mock.checkValue(ctx, src); err != nil {
+		return nil, err
+	}
 
-	return mock.key, nil
+	return mock.expect.key, mock.expect.err
 }
 
 func (dm *DatastoreMock) get(ctx context.Context, key *Key, dst interface{}) error {
@@ -119,6 +122,7 @@ func (dm *DatastoreMock) get(ctx context.Context, key *Key, dst interface{}) err
 	}
 
 	mock := dm.mocks[0]
+	defer dm.trimMock()
 
 	if err := mock.checkAction(ActionGet); err != nil {
 		return err
@@ -181,7 +185,7 @@ func (mock *MockAction) checkNamespace(ctx context.Context) error {
 
 func (mock *MockAction) checkKey(key *Key) error {
 	if !reflect.DeepEqual(mock.key, key) {
-		return errors.New("Key not equal")
+		return fmt.Errorf("Key %+v doesn't match with %+v", mock.key, key)
 	}
 	return nil
 }
@@ -240,6 +244,13 @@ func (m *MockAction) ExpectValue(val interface{}) *MockAction {
 
 func (m *MockAction) WillReturnErr(err error) {
 	m.expect.err = err
+}
+
+func (m *MockAction) checkValue(ctx context.Context, param interface{}) error {
+	if !reflect.DeepEqual(m.param, param) {
+		return fmt.Errorf("Param %+v doens't equal with expectation %+v", param, m.param)
+	}
+	return nil
 }
 
 func isMock(ctx context.Context) (*DatastoreMock, bool) {
