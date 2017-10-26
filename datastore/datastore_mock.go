@@ -104,6 +104,10 @@ func (dm *DatastoreMock) put(ctx context.Context, key *Key, src interface{}) (*K
 		return nil, err
 	}
 
+	if err := shouldRunInTransaction(ctx); err != nil {
+		return nil, err
+	}
+
 	dm.trimMock()
 
 	return mock.key, nil
@@ -125,6 +129,10 @@ func (dm *DatastoreMock) get(ctx context.Context, key *Key, dst interface{}) err
 	}
 
 	if err := mock.checkNamespace(ctx); err != nil {
+		return err
+	}
+
+	if err := shouldRunInTransaction(ctx); err != nil {
 		return err
 	}
 
