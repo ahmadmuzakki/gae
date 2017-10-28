@@ -33,6 +33,10 @@ func (k *MockKey) String() string {
 	return fmt.Sprintf("/%s,%s", k.kind, id)
 }
 
+func (k *MockKey) Encode() string {
+	return k.String()
+}
+
 func NewMock(ctx context.Context) (context.Context, *DatastoreMock) {
 	gaemock.ValidateContext(ctx)
 	mock := &DatastoreMock{}

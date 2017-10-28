@@ -143,7 +143,7 @@ func (q *Query) End(c Cursor) *Query {
 
 func (q *Query) preRun(ctx context.Context) {
 	if q.ancestor != nil {
-		dsKey := convertKeyToDsKey(ctx, q.ancestor)
+		dsKey := ConvertKeyToDsKey(ctx, q.ancestor)
 		q.queryDs = q.queryDs.Ancestor(dsKey)
 	}
 
@@ -231,7 +231,7 @@ func (i *Iterator) Next(dst interface{}) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ConvertDsKeyToKey(i.c, k), nil
+	return ConvertDsKeyToKey(k), nil
 }
 
 func (i *Iterator) Cursor() (Cursor, error) {
