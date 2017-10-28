@@ -6,6 +6,7 @@ import (
 	"github.com/ahmadmuzakki/gae/internal"
 	gaemock "github.com/ahmadmuzakki/gae/mock"
 	"golang.org/x/net/context"
+	"log"
 	"reflect"
 )
 
@@ -32,7 +33,7 @@ func (k *MockKey) String() string {
 	return fmt.Sprintf("/%s,%s", k.kind, id)
 }
 
-func Mock(ctx context.Context) (context.Context, *DatastoreMock) {
+func NewMock(ctx context.Context) (context.Context, *DatastoreMock) {
 	gaemock.ValidateContext(ctx)
 	mock := &DatastoreMock{}
 	ctx = context.WithValue(ctx, "datastore_mock", mock)
@@ -40,10 +41,10 @@ func Mock(ctx context.Context) (context.Context, *DatastoreMock) {
 }
 
 func (dm *DatastoreMock) MockIncompleteKey(ctx context.Context, kind string, parent *Key) *Key {
-	return dm.MockKey(ctx, kind, "", 0, parent)
+	return dm.ExpectKey(ctx, kind, "", 0, parent)
 }
 
-func (dm *DatastoreMock) MockKey(ctx context.Context, kind string, stringID string, intID int64, parent *Key) *Key {
+func (dm *DatastoreMock) ExpectKey(ctx context.Context, kind string, stringID string, intID int64, parent *Key) *Key {
 	k := &Key{
 		kind:      kind,
 		parent:    parent,
@@ -66,6 +67,27 @@ func (dm *DatastoreMock) newKey(ctx context.Context, kind string, stringID strin
 	}
 
 	k := dm.keys[0]
+
+	if kind != k.kind {
+		log.Printf("[ERROR] Mismatch Kind. Expected %s vs Actual %s \n", k.kind, kind)
+		return nil
+	}
+
+	if stringID != k.stringID {
+		log.Printf("[ERROR] Mismatch StringID. Expected %s vs Actual %s \n", k.stringID, stringID)
+		return nil
+	}
+
+	if intID != k.intID {
+		log.Printf("[ERROR] Mismatch IntID. Expected %d vs Actual %d \n", k.intID, intID)
+		return nil
+	}
+
+	if !reflect.DeepEqual(parent, k.parent) {
+		log.Printf("[ERROR] Mismatch Parent. Expected %+v vs Actual %+v \n", k.parent, parent)
+		return nil
+	}
+
 	if len(dm.keys) > 1 {
 		dm.keys = dm.keys[1:]
 	} else {

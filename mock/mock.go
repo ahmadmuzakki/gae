@@ -8,7 +8,7 @@ import (
 type mock struct {
 }
 
-func InitMock() context.Context {
+func NewMock() context.Context {
 	m := &mock{}
 	ctx := context.WithValue(context.Background(), "gae_mock", m)
 

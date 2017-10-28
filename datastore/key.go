@@ -46,19 +46,19 @@ func convertKeyToDsKey(ctx context.Context, key *Key) *datastore.Key {
 	return datastore.NewKey(ctx, key.kind, key.stringID, key.intID, parent)
 }
 
-func convertDsKeyToKey(ctx context.Context, key *datastore.Key) *Key {
+func ConvertDsKeyToKey(ctx context.Context, key *datastore.Key) *Key {
 	if key == nil {
 		return nil
 	}
 
-	parent := convertDsKeyToKey(ctx, key.Parent())
+	parent := ConvertDsKeyToKey(ctx, key.Parent())
 	return NewKey(ctx, key.Kind(), key.StringID(), key.IntID(), parent)
 }
 
 func convertDsKeysToKeys(ctx context.Context, dsKeys []*datastore.Key) []*Key {
 	newKeys := make([]*Key, 0, len(dsKeys))
 	for _, dsKey := range dsKeys {
-		key := convertDsKeyToKey(ctx, dsKey)
+		key := ConvertDsKeyToKey(ctx, dsKey)
 		newKeys = append(newKeys, key)
 	}
 

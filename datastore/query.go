@@ -231,7 +231,7 @@ func (i *Iterator) Next(dst interface{}) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	return convertDsKeyToKey(i.c, k), nil
+	return ConvertDsKeyToKey(i.c, k), nil
 }
 
 func (i *Iterator) Cursor() (Cursor, error) {

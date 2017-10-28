@@ -12,7 +12,7 @@ func Put(ctx context.Context, key *Key, src interface{}) (*Key, error) {
 
 	dsKey := convertKeyToDsKey(ctx, key)
 	k, err := datastore.Put(ctx, dsKey, src)
-	return convertDsKeyToKey(ctx, k), err
+	return ConvertDsKeyToKey(ctx, k), err
 }
 
 func Get(ctx context.Context, key *Key, dst interface{}) error {
